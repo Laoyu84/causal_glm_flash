@@ -25,7 +25,7 @@ MAX_LOOP = 3
 #"该公司的Debt to Equity Ratio在过去五年中有何变化？这一变化反映了企业在不同阶段的杠杆策略有何特点？",
 #"该公司对大额商誉减值的风险敞口有多大？此类减值将对权益和杠杆率产生什么影响？"     
 """
-question = "相较于去年，2025的利润率提升的主要驱动力是什么?"
+question = "相较于去年,2025的利润率提升的主要驱动力是什么?"
 try:
     ##### Load Causal Graph and Sentiments #####
     # Classify user question with LLMs to determine which YAML to load
@@ -40,6 +40,7 @@ try:
     """
     usr_msg = CLASSIFY_USER.format( question=question)
     classify_messages = format_messages(CLASSIFY_SYS, usr_msg )
+    print(f"\n================= 分类问题: {question} =================\n")
     filename = completion(classify_messages, 
                             model=constant.GLM45FLASH, 
                             thinking_type="disabled", 
@@ -50,7 +51,7 @@ try:
 
     yaml_filename = filename + '.yaml'
     csv_filename = filename + '.csv'
-    print(f"Question '{question}' is classified as '{yaml_filename}'.")
+    print(f"1. 问题 '{question}' 被分类为 '{yaml_filename}'.")
     causal_yaml_path = os.path.join(os.path.dirname(__file__), 'data', yaml_filename)
 
     # Read YAML file from data folder
@@ -70,16 +71,15 @@ try:
     ANALYTICS_USER = """
     Based on the causal graph, sentiments among variables and data schema provided, please generate code to list facts which can help answer the following question. 
     ## REQUIREMENTS
-    - Load data from folder '{path}' based on the schema, sample and question provided 
-    - pay attention to the causal graph and sentiments among variables
-    - analyze as deep as possible to find the root cause
+    - load data from folder '{path}' based on the schema, sample and question provided 
+    - use entire causal graph and all sentiments among variables, don't miss any important node or sentiment
+    - analyze as deep as possible in causal graph to find the root cause
     - only output code
     - the code should be runnable in Python environment
-    - DO NOT get to conclusions, only list facts you found in Chinese
+    - DO NOT get to conclusions, only list facts you found
     - DO NOT use pd.StringIO function, use io.StringIO instead
     - DO NOT make up any data, read data from the path provided
     - Print facts you found in Chinese
-    - Your output in print function should be in Chinese
 
     ## RULES
     - all data in data source are numeric, including year column
@@ -122,6 +122,7 @@ try:
             )
 
         messages = format_messages(ANALYTICS_SYS, usr_msg)
+        print("\n================= 生成代码 =================\n")
         generated_code = completion(
             messages,
             model=constant.GLM45FLASH,
@@ -129,11 +130,13 @@ try:
             thinking_type="disabled"
         )
         generated_code = generated_code.replace("```python", "").replace("```", "").strip()
-
+       
+    
         stdout_buffer = io.StringIO()
         try:
             sys_stdout = sys.stdout
             sys.stdout = stdout_buffer
+            print("\n================= 执行代码 =================\n")
             exec(generated_code)
             facts = stdout_buffer.getvalue()
             error_msg = None
@@ -143,7 +146,7 @@ try:
             facts = f"Error: {error_msg}"
         finally:
             sys.stdout = sys_stdout
-            print("\n================= Facts =================\n")
+            print("\n================= 代码执行结果: Facts =================\n")
             print(facts)
 
     ##### Answering the Question with Facts #####
@@ -151,9 +154,9 @@ try:
     ANSWERING_USER = """
     Please answer the following question based on the causal graph, sentiments among variables and facts provided:
     ## REQUIREMENTS
-    - pay attention to the causal graph and sentiments among variables
-    - find the root cause as deep as possible
+    - leveraging full causal graph and all sentiments among variables to find the root cause as deep as possible
     - use facts provided to support your answer
+    - DONT make up any fact
     - Your output should be in Chinese
 
     ## Causal Graph 
@@ -174,12 +177,13 @@ try:
                             facts=facts,
                             question=question)
     messages = format_messages(ANSWERING_SYS,usr_msg)
+    print("\n================= 进行分析 =================\n")
     answer = completion(messages, 
                         model=constant.GLM45FLASH,
                         thinking_type="enabled",
                         stream=True
                         )
-    print("\n================= Final Answer =================\n")
+    print("\n================= 最终结论 =================\n")
     print(answer)
 except Exception as e:
     print(f"\nException occurred while processing question '{question}': {e}\nTraceback:\n{traceback.format_exc()}\nContinuing to next question...\n")

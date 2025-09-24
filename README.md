@@ -5,6 +5,11 @@ The agent is designed to harness free-tier LLMs to deliver in-depth insights int
 # Architecture
 ![Architecture](images/architecture.png)
 # Get Started
+Setup your auth in a local '.env' file: 
+```
+GLM_API_KEY = "Your GLM key"
+```
+Then following below commands to run the app: 
 
 ```bash
 git clone https://github.com/Laoyu84/causal_glm_flash.git
